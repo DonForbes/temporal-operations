@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: temporal-operations
+
+
+server:
+  port: 8091
