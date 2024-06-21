@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# My stuff
+vault/temporal-service-principal-vault
