@@ -1,7 +1,27 @@
 spring:
   application:
     name: temporal-operations
+  cloud:
+    vault:
+      host: localhost
+      port: 8200
+      scheme: http
+      uri: http://localhost:8200
+      connection-timeout: 5000
+      read-timeout: 15000
+      conig:
+        order: -10
+      authentication: TOKEN
+      token: hvs.7c4kw2ge3a2EYAok1KkwZZwS
 
 
 server:
   port: 8091
+
+pki:
+  role: temporal-operations-role
+  commonName: localhost
+  altNames:
+    - localhost
+    - donaldforbes.com
+
