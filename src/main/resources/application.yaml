@@ -25,3 +25,7 @@ pki:
     - localhost
     - donaldforbes.com
 
+cloud-operations:
+  host: saas-api.tmprl.cloud
+  port: 443
+  tmprlApiKey: "Set Via Env Var of TEMPORAL_CLOUD_API_KEY"
