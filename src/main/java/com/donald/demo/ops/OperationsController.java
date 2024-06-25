@@ -1,5 +1,7 @@
 package com.donald.demo.ops;
 
+import java.util.Collection;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.certificates.VaultPkiProperties;
+import com.donald.demo.ops.namespace.NamespaceMgmt;
+import com.donald.demo.ops.namespace.model.CloudOperationDetails;
+import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
+
+import io.grpc.Channel;
+import io.grpc.ClientInterceptors;
+import io.grpc.ManagedChannelBuilder;
 
 @RestController
 public class OperationsController {
@@ -25,7 +34,12 @@ public class OperationsController {
     VaultPkiProperties pkiProperties;
     @Autowired
     VaultOperations operations;
+    NamespaceMgmt namespaceMgmt;
+    @Autowired
+    private CloudOperationDetails cloudOpsDetails;
 	private final static Logger logger = LoggerFactory.getLogger(OperationsController.class);
+  //  private final TemporalCloudApiClient client = new TemporalCloudApiClient("saas-api.tmprl.cloud", 443);
+
 
     @GetMapping("create-certificate")
     public  ResponseEntity<String> createCertificate()
@@ -48,5 +62,12 @@ public class OperationsController {
         logger.debug("The CA cert is [" + caCert + "]");
         return caCert;
     } // End get current CA
+
+    @GetMapping("get-namespaces")
+    public Collection<CloudOperationsNamespace> getNamespaces() {
+        this.namespaceMgmt = new NamespaceMgmt(cloudOpsDetails);
+
+        return this.namespaceMgmt.getNamespaces();
+    } // End getNamespaces
 }
 
