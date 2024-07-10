@@ -17,14 +17,16 @@ import org.springframework.vault.core.VaultTemplate;
 import org.springframework.vault.client.VaultEndpoint;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.certificates.VaultPkiProperties;
-import com.donald.demo.ops.namespace.NamespaceMgmt;
+import com.donald.demo.ops.namespace.OperationsMgmt;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import io.grpc.Channel;
 import io.grpc.ClientInterceptors;
@@ -37,7 +39,6 @@ public class OperationsController {
     VaultPkiProperties pkiProperties;
     @Autowired
     VaultOperations operations;
-    NamespaceMgmt namespaceMgmt;
     @Autowired
     private CloudOperationDetails cloudOpsDetails;
 	private final static Logger logger = LoggerFactory.getLogger(OperationsController.class);
@@ -66,26 +67,41 @@ public class OperationsController {
         return caCert;
     } // End get current CA
 
-    @GetMapping("get-namespaces")
+    @GetMapping("/namespaces")
     public ResponseEntity<Collection<CloudOperationsNamespace>> getNamespaces(@RequestParam(required=true) String apiKey) {
         cloudOpsDetails.setTmprlApiKey(apiKey);
         logger.debug("The API key that should be used is [" + apiKey + "]");
         logger.debug("The API key being used is [" + cloudOpsDetails.getTmprlApiKey() + "]"); 
 
-        this.namespaceMgmt = new NamespaceMgmt(cloudOpsDetails);
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
         Collection<CloudOperationsNamespace> cloudOpsNamespaces = new ArrayList<CloudOperationsNamespace>();
         try {
-            cloudOpsNamespaces = this.namespaceMgmt.getNamespaces();
+            cloudOpsNamespaces = opsMgmt.getNamespaces();
         } catch (io.grpc.StatusRuntimeException e) {
             logger.error("ERROR - Failed to retrieve namespaces [" + e.getMessage() + "]");
-            CloudOperationsNamespace aCloudOpsNamespace = new CloudOperationsNamespace();
-            aCloudOpsNamespace.setName("-");
-            aCloudOpsNamespace.setActiveRegion("-");
-            aCloudOpsNamespace.setState("Failed to retrieve namespaces [" + e.getMessage() +"]");
-            cloudOpsNamespaces.add(aCloudOpsNamespace);
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
         }
         return ResponseEntity.of(Optional.of(cloudOpsNamespaces));
-    } // End getNamespaces
+    } // End namespaces
+
+    @GetMapping("/namespace/{name}")
+    public ResponseEntity<CloudOperationsNamespace> getNamespace(@RequestParam(required=true) String apiKey, 
+                                                                 @PathVariable String name) {
+        cloudOpsDetails.setTmprlApiKey(apiKey);    
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);                                                        
+        CloudOperationsNamespace cloudOpsNamespace = new CloudOperationsNamespace();
+        cloudOpsNamespace.setName(name);
+        try {
+            cloudOpsNamespace = opsMgmt.getNamespace(cloudOpsNamespace);
+        } catch (io.grpc.StatusRuntimeException e) {
+            logger.error("ERROR - Failure to retrieve namespace [{}]", e.getMessage());
+            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
+        } catch (InvalidProtocolBufferException e) {
+            logger.error("ERROR - Failed to retrieve namespace [{}]", e.getMessage());
+            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
+        }
+        return ResponseEntity.of(Optional.of(cloudOpsNamespace));
+    } // End getNamespace/name
+    
 }
 
