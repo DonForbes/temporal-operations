@@ -14,7 +14,12 @@ spring:
       authentication: TOKEN
       token: hvs.7c4kw2ge3a2EYAok1KkwZZwS
 
-
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,temporalworkerinfo
+        
 server:
   port: 8091
 

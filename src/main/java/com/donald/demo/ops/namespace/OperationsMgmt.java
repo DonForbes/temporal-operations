@@ -85,7 +85,7 @@ public class OperationsMgmt {
         GetNamespaceResponse nsResponse = cloudOpsClient.getNamespace(nsRequest);
         Namespace namespace = nsResponse.getNamespace();
         cloudOpsNamespace.setRetentionPeriod(namespace.getSpec().getRetentionDays());
-        cloudOpsNamespace.setCertAuthorityPublicCert(namespace.getSpec().getMtlsAuth().getAcceptedClientCa());
+        cloudOpsNamespace.setCertAuthorityPublicCertificates(namespace.getSpec().getMtlsAuth().getAcceptedClientCa());
         cloudOpsNamespace.setActiveRegion(namespace.getActiveRegion());
         cloudOpsNamespace.setState(namespace.getState());
         cloudOpsNamespace.setCloudOpsUsers(this.getUsersByNamespace(cloudOpsNamespace.getName()));

@@ -25,6 +25,7 @@ import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.certificates.VaultPkiProperties;
 import com.donald.demo.ops.namespace.OperationsMgmt;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
+import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -61,9 +62,9 @@ public class OperationsController {
     }  // End createCertificate
 
     @GetMapping("get-current-ca-certificate")
-    public String getCurrentCA() {
-        String caCert = CertificateUtil.getCACertificate(operations, null);
-        logger.debug("The CA cert is [" + caCert + "]");
+    public CloudOperationsCertAuthority getCurrentCA() {
+        CloudOperationsCertAuthority caCert = CertificateUtil.getCACertificate(operations, null);
+        logger.debug("The CA cert is [{}]", caCert.toString());
         return caCert;
     } // End get current CA
 
