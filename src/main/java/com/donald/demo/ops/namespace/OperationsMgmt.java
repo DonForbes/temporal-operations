@@ -3,10 +3,10 @@ package com.donald.demo.ops.namespace;
 import com.donald.demo.ops.namespace.interceptors.HeaderClientInterceptor;
 import com.donald.demo.ops.namespace.interceptors.LoggingClientInterceptor;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
+import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespaceAccess;
 import com.donald.demo.ops.namespace.model.CloudOperationsUser;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import io.grpc.Channel;
@@ -16,13 +16,19 @@ import io.grpc.ManagedChannelBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Base64;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.temporal.api.cloud.namespace.v1.CodecServerSpec;
+import io.temporal.api.cloud.namespace.v1.MtlsAuthSpec;
 import io.temporal.api.cloud.namespace.v1.Namespace;
+import io.temporal.api.cloud.namespace.v1.NamespaceSpec;
 import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc;
+import io.temporal.api.cloud.cloudservice.v1.CreateNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesRequest;
@@ -89,9 +95,41 @@ public class OperationsMgmt {
         cloudOpsNamespace.setActiveRegion(namespace.getActiveRegion());
         cloudOpsNamespace.setState(namespace.getState());
         cloudOpsNamespace.setCloudOpsUsers(this.getUsersByNamespace(cloudOpsNamespace.getName()));
+        cloudOpsNamespace.setCodecEndPoint(namespace.getSpec().getCodecServer().getEndpoint());
 
         return cloudOpsNamespace;
     } // End getNamepace
+
+    public String createNamespace(CloudOperationsNamespace cloudOpsNamespace) throws InvalidProtocolBufferException {
+        logger.debug("Method Entry - createNamespace");
+        logger.debug("The namespace we are looking to create has these values [{}]", cloudOpsNamespace.toString());
+
+
+        StringBuffer certs = new StringBuffer();
+        for (CloudOperationsCertAuthority certAuth :  cloudOpsNamespace.getCertAuthorityPublicCerts()) 
+        {
+            certs.append(certAuth.getCaCert());
+            certs.append(System.lineSeparator());
+        }
+        
+        MtlsAuthSpec mtlsSpec = MtlsAuthSpec.newBuilder()
+                                            .setAcceptedClientCa(Base64.getEncoder().encodeToString(certs.toString().getBytes()))
+                                            .setEnabled(true)
+                                            .build();
+        CodecServerSpec codecServerSpec = CodecServerSpec.newBuilder().setEndpoint(cloudOpsNamespace.getCodecEndPoint()).build();
+
+        NamespaceSpec nsSpec = NamespaceSpec.newBuilder()
+                                            .setName(cloudOpsNamespace.getName())
+                                            .setMtlsAuth(mtlsSpec)
+                                            .setRetentionDays(cloudOpsNamespace.getRetentionPeriod())
+                                            .addRegions(cloudOpsNamespace.getActiveRegion())
+                                            .setCodecServer(codecServerSpec)
+                                            .build();
+        CreateNamespaceRequest nsRequest = CreateNamespaceRequest.newBuilder().setSpec(nsSpec).build();
+        cloudOpsClient.createNamespace(nsRequest);
+
+        return "Success";
+    }  // End createNamespace
 
     public Collection<CloudOperationsUser> getUsers() {
         GetUsersRequest usersRequest = GetUsersRequest.newBuilder().build();
@@ -119,6 +157,7 @@ public class OperationsMgmt {
         }
         return cloudOpsUsers;
     } // End getUsers
+
 
     public Collection<CloudOperationsUser> getUsersByNamespace(String namespace) {
         Collection<CloudOperationsUser> cloudOpsUsers = this.getUsers();
@@ -154,4 +193,11 @@ public class OperationsMgmt {
         return cloudOpsUsers;
 
     }// End getUsersByNamespace
+
+    public Collection<CloudOperationsUser> getUsersByRole(String role) {
+        Collection<CloudOperationsUser> usersByRole = new ArrayList<>();
+        // TODO - Implement if needed.
+
+        return usersByRole;
+    }// End getUsersByRole
 }

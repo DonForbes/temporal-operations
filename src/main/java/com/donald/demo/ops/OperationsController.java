@@ -18,6 +18,7 @@ import org.springframework.vault.client.VaultEndpoint;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,8 +26,10 @@ import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.certificates.VaultPkiProperties;
 import com.donald.demo.ops.namespace.OperationsMgmt;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
+import com.donald.demo.ops.namespace.model.CloudOperations;
 import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
+import com.donald.demo.ops.namespace.model.CloudOperationsUser;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import io.grpc.Channel;
@@ -42,24 +45,22 @@ public class OperationsController {
     VaultOperations operations;
     @Autowired
     private CloudOperationDetails cloudOpsDetails;
-	private final static Logger logger = LoggerFactory.getLogger(OperationsController.class);
-  //  private final TemporalCloudApiClient client = new TemporalCloudApiClient("saas-api.tmprl.cloud", 443);
-
+    private final static Logger logger = LoggerFactory.getLogger(OperationsController.class);
+    // private final TemporalCloudApiClient client = new
+    // TemporalCloudApiClient("saas-api.tmprl.cloud", 443);
 
     @GetMapping("create-certificate")
-    public  ResponseEntity<String> createCertificate()
-    {
+    public ResponseEntity<String> createCertificate() {
         logger.debug("methodEntry: createCertificate");
 
-         VaultCertificateResponse vaultCertificate = CertificateUtil.requestCertificate(operations, pkiProperties);
+        VaultCertificateResponse vaultCertificate = CertificateUtil.requestCertificate(operations, pkiProperties);
 
-         logger.debug("Certificate is [" +  vaultCertificate.getData().getCertificate() + "]");
-         logger.debug("Private Key is [" + vaultCertificate.getData().getPrivateKey() + "]");
-         logger.debug("Issuing CA certificate is[" + vaultCertificate.getData().getIssuingCaCertificate() + "]");
-
+        logger.debug("Certificate is [" + vaultCertificate.getData().getCertificate() + "]");
+        logger.debug("Private Key is [" + vaultCertificate.getData().getPrivateKey() + "]");
+        logger.debug("Issuing CA certificate is[" + vaultCertificate.getData().getIssuingCaCertificate() + "]");
 
         return new ResponseEntity<>("hello", HttpStatus.OK);
-    }  // End createCertificate
+    } // End createCertificate
 
     @GetMapping("get-current-ca-certificate")
     public CloudOperationsCertAuthority getCurrentCA() {
@@ -69,10 +70,11 @@ public class OperationsController {
     } // End get current CA
 
     @GetMapping("/namespaces")
-    public ResponseEntity<Collection<CloudOperationsNamespace>> getNamespaces(@RequestParam(required=true) String apiKey) {
+    public ResponseEntity<Collection<CloudOperationsNamespace>> getNamespaces(
+            @RequestParam(required = true) String apiKey) {
         cloudOpsDetails.setTmprlApiKey(apiKey);
         logger.debug("The API key that should be used is [" + apiKey + "]");
-        logger.debug("The API key being used is [" + cloudOpsDetails.getTmprlApiKey() + "]"); 
+        logger.debug("The API key being used is [" + cloudOpsDetails.getTmprlApiKey() + "]");
 
         OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
         Collection<CloudOperationsNamespace> cloudOpsNamespaces = new ArrayList<CloudOperationsNamespace>();
@@ -80,29 +82,61 @@ public class OperationsController {
             cloudOpsNamespaces = opsMgmt.getNamespaces();
         } catch (io.grpc.StatusRuntimeException e) {
             logger.error("ERROR - Failed to retrieve namespaces [" + e.getMessage() + "]");
-            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
         }
         return ResponseEntity.of(Optional.of(cloudOpsNamespaces));
     } // End namespaces
 
+    @PostMapping("/namespace")
+    public void createNamespace(@RequestBody CloudOperations cloudOps){
+        cloudOpsDetails.setTmprlApiKey(cloudOps.getWfMetadata().getApiKey());
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
+        logger.debug("The cloud operations object we are looking to create from [{}]", cloudOps.toString());
+        try {
+            logger.info("Created namespace [{}] - result [{}]", 
+                                        cloudOps.getCloudOpsNamespace().getName(), 
+                                        opsMgmt.createNamespace(cloudOps.getCloudOpsNamespace()));  // CREATE!
+        }
+        catch (InvalidProtocolBufferException e){
+            logger.error("ERROR - Failed to create namespace [" + e.getMessage() + "]");
+            ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+        }
+
+        catch (io.grpc.StatusRuntimeException e) {
+            logger.error("ERROR - Failed to create namespace [" + e.getMessage() + "]");
+            ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+        }
+
+    } // End createNamespace
+
     @GetMapping("/namespace/{name}")
-    public ResponseEntity<CloudOperationsNamespace> getNamespace(@RequestParam(required=true) String apiKey, 
-                                                                 @PathVariable String name) {
-        cloudOpsDetails.setTmprlApiKey(apiKey);    
-        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);                                                        
+    public ResponseEntity<CloudOperationsNamespace> getNamespace(@RequestParam(required = true) String apiKey,
+            @PathVariable String name) {
+        cloudOpsDetails.setTmprlApiKey(apiKey);
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
         CloudOperationsNamespace cloudOpsNamespace = new CloudOperationsNamespace();
         cloudOpsNamespace.setName(name);
         try {
             cloudOpsNamespace = opsMgmt.getNamespace(cloudOpsNamespace);
         } catch (io.grpc.StatusRuntimeException e) {
             logger.error("ERROR - Failure to retrieve namespace [{}]", e.getMessage());
-            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
         } catch (InvalidProtocolBufferException e) {
             logger.error("ERROR - Failed to retrieve namespace [{}]", e.getMessage());
-            return ResponseEntity.badRequest().header("OpsResponse",e.getMessage()).build();
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
         }
         return ResponseEntity.of(Optional.of(cloudOpsNamespace));
     } // End getNamespace/name
-    
-}
 
+    @GetMapping("/users/{role}")
+    public ResponseEntity<Collection<CloudOperationsUser>> getUsersByRole(@RequestParam(required = true) String apiKey,
+            @PathVariable String role) {
+
+        Collection<CloudOperationsUser> users = new ArrayList<>();
+
+        logger.info("TODO - Implemenbt get users by role");
+
+        return ResponseEntity.of(Optional.of(users));
+    } // End getUsersByRole
+
+}

@@ -12,6 +12,8 @@ public class CloudOperationsNamespace {
     //private String secondaryRegion;
     private String state;
     private int retentionPeriod;
+    private Collection<CloudOperationsCertAuthority> certAuthorityPublicCerts;
     private String certAuthorityPublicCertificates;
     private Collection<CloudOperationsUser> cloudOpsUsers;
+    private String codecEndPoint;
 }
