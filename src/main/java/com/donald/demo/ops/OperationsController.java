@@ -15,12 +15,14 @@ import org.springframework.vault.support.VaultCertificateResponse;
 import org.springframework.vault.core.VaultOperations;
 import org.springframework.vault.core.VaultTemplate;
 import org.springframework.vault.client.VaultEndpoint;
-
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.certificates.VaultPkiProperties;
@@ -30,6 +32,7 @@ import com.donald.demo.ops.namespace.model.CloudOperations;
 import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.donald.demo.ops.namespace.model.CloudOperationsUser;
+import com.donald.demo.ops.namespace.model.WorkflowMetadata;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import io.grpc.Channel;
@@ -88,7 +91,8 @@ public class OperationsController {
     } // End namespaces
 
     @PostMapping("/namespace")
-    public void createNamespace(@RequestBody CloudOperations cloudOps){
+    @ResponseBody
+    public ResponseEntity createNamespace(@RequestBody CloudOperations cloudOps){
         cloudOpsDetails.setTmprlApiKey(cloudOps.getWfMetadata().getApiKey());
         OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
         logger.debug("The cloud operations object we are looking to create from [{}]", cloudOps.toString());
@@ -98,14 +102,20 @@ public class OperationsController {
                                         opsMgmt.createNamespace(cloudOps.getCloudOpsNamespace()));  // CREATE!
         }
         catch (InvalidProtocolBufferException e){
-            logger.error("ERROR - Failed to create namespace [" + e.getMessage() + "]");
-            ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+            logger.error("ERROR - Failed to create namespace - [" + e.getMessage() + "]");
+            return ResponseEntity.badRequest()
+                                 .header("OpsResponse", e.getMessage())
+                                 .body(e.getMessage());
         }
 
         catch (io.grpc.StatusRuntimeException e) {
             logger.error("ERROR - Failed to create namespace [" + e.getMessage() + "]");
-            ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+            return ResponseEntity.badRequest()
+                                 .header("OpsResponse", e.getMessage())
+                                 .body(e.getMessage());
         }
+
+        return ResponseEntity.ok(HttpStatus.OK);
 
     } // End createNamespace
 
@@ -127,6 +137,32 @@ public class OperationsController {
         }
         return ResponseEntity.of(Optional.of(cloudOpsNamespace));
     } // End getNamespace/name
+
+    @DeleteMapping("/namespace/{name}")
+    public ResponseEntity<String> deleteNamespace(@PathVariable String name,
+                                  @RequestHeader("Authorization") String apiKeyBearer)
+    {
+        logger.debug("methodEntry - deleteNamespace");
+         
+        String apiKey = apiKeyBearer.replace("Bearer ","");
+        logger.debug("Delete namespace [{}] with apiKey [{}]", name, apiKey);
+
+        cloudOpsDetails.setTmprlApiKey(apiKey);
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
+        CloudOperationsNamespace cloudOpsNamespace = new CloudOperationsNamespace();
+        cloudOpsNamespace.setName(name);
+        try {
+            opsMgmt.deleteNamespace(cloudOpsNamespace);
+        } catch (io.grpc.StatusRuntimeException e) {
+            logger.error("ERROR - Failure to delete namespace [{}]", e.getMessage());
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+        } catch (InvalidProtocolBufferException e) {
+            logger.error("ERROR - Failed to delete namespace [{}]", e.getMessage());
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+        }
+
+        return ResponseEntity.of(Optional.of("Deleted namespace [" + name + "] using apiKey [" + apiKey));
+    }   // End deleteNamespace
 
     @GetMapping("/users/{role}")
     public ResponseEntity<Collection<CloudOperationsUser>> getUsersByRole(@RequestParam(required = true) String apiKey,

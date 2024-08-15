@@ -29,6 +29,7 @@ import io.temporal.api.cloud.namespace.v1.Namespace;
 import io.temporal.api.cloud.namespace.v1.NamespaceSpec;
 import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc;
 import io.temporal.api.cloud.cloudservice.v1.CreateNamespaceRequest;
+import io.temporal.api.cloud.cloudservice.v1.DeleteNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesRequest;
@@ -200,4 +201,24 @@ public class OperationsMgmt {
 
         return usersByRole;
     }// End getUsersByRole
+
+    public void deleteNamespace(CloudOperationsNamespace cloudOpsNamespace) throws InvalidProtocolBufferException
+    {
+        logger.debug("Deleting namespace called [{}]", cloudOpsNamespace.getName());
+
+
+        //  Using the name we find the namespace and get the latest resource version to enable the delete to work.
+        GetNamespaceRequest nsRequest = GetNamespaceRequest.newBuilder()
+                                                            .setNamespace(cloudOpsNamespace.getName())
+                                                            .build();
+        GetNamespaceResponse nsResponse = cloudOpsClient.getNamespace(nsRequest);
+
+
+        DeleteNamespaceRequest deleteNS = DeleteNamespaceRequest.newBuilder()
+                                                                .setNamespace(cloudOpsNamespace.getName()) 
+                                                                .setResourceVersion(nsResponse.getNamespace().getResourceVersion())
+                                                                .build();
+        cloudOpsClient.deleteNamespace(deleteNS);
+
+    }
 }
