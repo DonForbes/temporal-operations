@@ -1,14 +1,18 @@
 package com.donald.demo.ops.namespace.model;
 
 import lombok.Data;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.math.BigInteger;
+
 import java.util.Collection;
 
 @Data
 public class CloudOperationsCertAuthority {
     private String caCert;
-    private Date expiryDate;
-    private Date notBefore;
+    private LocalDateTime expiryDate;
+    private LocalDateTime notBefore;
     private String subjectPrincipal;
+    private String issuerPrincipal;
     private Collection<String> alternativeNames;
+    private BigInteger serialNumber;
 }

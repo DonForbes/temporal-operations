@@ -138,6 +138,32 @@ public class OperationsController {
         return ResponseEntity.of(Optional.of(cloudOpsNamespace));
     } // End getNamespace/name
 
+    @PostMapping("/namespace/{name}")
+    @ResponseBody
+    public ResponseEntity<String> updateNamespace(@PathVariable String name,
+                                                  @RequestBody CloudOperationsNamespace cloudOpsNamespace,
+                                                  @RequestHeader("Authorization") String apiKeyBearer)
+    {
+        logger.debug("methodEntry - updateNamespace(controller)");
+         
+        String apiKey = apiKeyBearer.replace("Bearer ","");
+        logger.debug("Delete namespace [{}] with apiKey [{}]", name, apiKey);
+
+        cloudOpsDetails.setTmprlApiKey(apiKey);
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
+        String updateResult = "";
+        try {
+            updateResult = opsMgmt.updateNamespace(cloudOpsNamespace);
+        } catch (io.grpc.StatusRuntimeException e) {
+            logger.error("ERROR - Failure to delete namespace [{}]", e.getMessage());
+            return ResponseEntity.badRequest().header("OpsResponse", e.getMessage()).build();
+        } 
+
+        return ResponseEntity.of(Optional.of("Update namespace [" + name + "] using apiKey [" 
+                                              + apiKey + "] the result of the operation was [" 
+                                              + updateResult + "]"));
+    }   // End updateeNamespace
+
     @DeleteMapping("/namespace/{name}")
     public ResponseEntity<String> deleteNamespace(@PathVariable String name,
                                   @RequestHeader("Authorization") String apiKeyBearer)
@@ -176,3 +202,4 @@ public class OperationsController {
     } // End getUsersByRole
 
 }
+ 
