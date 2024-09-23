@@ -34,3 +34,5 @@ cloud-operations:
   host: saas-api.tmprl.cloud
   port: 443
   tmprlApiKey: "Set Via Env Var of TEMPORAL_CLOUD_API_KEY"
+  apiKeyTokenName: donald-demo
+  apiKeyOwnerId: 14fc14bfb5464208bb2cd86470b697aa

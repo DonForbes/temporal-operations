@@ -12,6 +12,8 @@ public class CloudOperationDetails {
     private String host;
     private String port;
     private String tmprlApiKey;
+    private String apiKeyTokenName;
+    private String apiKeyOwnerId;
 
     // Set using the environment variable first and if that is not set then use the value from the config file.
     public void setTmprlApiKey(String apiKey) {

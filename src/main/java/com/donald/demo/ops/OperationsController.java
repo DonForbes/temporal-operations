@@ -29,6 +29,7 @@ import com.donald.demo.ops.certificates.VaultPkiProperties;
 import com.donald.demo.ops.namespace.OperationsMgmt;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
 import com.donald.demo.ops.namespace.model.CloudOperations;
+import com.donald.demo.ops.namespace.model.CloudOperationsApiKey;
 import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.donald.demo.ops.namespace.model.CloudOperationsUser;
@@ -201,5 +202,21 @@ public class OperationsController {
         return ResponseEntity.of(Optional.of(users));
     } // End getUsersByRole
 
+    @PostMapping("/apikey/{apiKeyName}")
+    @ResponseBody
+    public ResponseEntity<CloudOperationsApiKey> createShortLivedApiKey(@PathVariable String apiKeyName,
+                                                                        @RequestHeader("Authorization") String apiKeyBearer)
+    {
+        logger.debug("Method Entry - createShortlivedApiKey");
+        String apiKey = apiKeyBearer.replace("Bearer ","");
+        logger.debug("create short lived apiKey [{}], using token [{}]", apiKeyName, apiKeyBearer);
+
+        cloudOpsDetails.setTmprlApiKey(apiKey);
+
+        OperationsMgmt opsMgmt = new OperationsMgmt(cloudOpsDetails);
+
+        CloudOperationsApiKey cloudOpsApiKey = opsMgmt.createShortLivedApiKey(apiKeyName);
+        return ResponseEntity.of(Optional.of(cloudOpsApiKey));
+    }   // End createShortLivedApiKey
 }
  

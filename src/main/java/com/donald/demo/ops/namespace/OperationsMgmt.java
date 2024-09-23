@@ -6,27 +6,38 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import com.donald.demo.ops.certificates.CertificateUtil;
 import com.donald.demo.ops.namespace.interceptors.HeaderClientInterceptor;
 import com.donald.demo.ops.namespace.interceptors.LoggingClientInterceptor;
 import com.donald.demo.ops.namespace.model.CloudOperationDetails;
+import com.donald.demo.ops.namespace.model.CloudOperationsApiKey;
 import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespaceAccess;
 import com.donald.demo.ops.namespace.model.CloudOperationsUser;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 
 import io.grpc.Channel;
 import io.grpc.ClientInterceptors;
 import io.grpc.ManagedChannelBuilder;
 import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc;
+import io.temporal.api.cloud.cloudservice.v1.CreateApiKeyRequest;
+import io.temporal.api.cloud.cloudservice.v1.CreateApiKeyResponse;
 import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc.CloudServiceBlockingStub;
 import io.temporal.api.cloud.cloudservice.v1.CreateNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.DeleteNamespaceRequest;
+import io.temporal.api.cloud.cloudservice.v1.GetApiKeyRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesRequest;
@@ -35,26 +46,30 @@ import io.temporal.api.cloud.cloudservice.v1.GetUsersRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetUsersResponse;
 import io.temporal.api.cloud.cloudservice.v1.UpdateApiKeyRequest;
 import io.temporal.api.cloud.cloudservice.v1.UpdateNamespaceRequest;
+import io.temporal.api.cloud.identity.v1.ApiKeySpec;
 import io.temporal.api.cloud.identity.v1.User;
 import io.temporal.api.cloud.namespace.v1.CodecServerSpec;
 import io.temporal.api.cloud.namespace.v1.MtlsAuthSpec;
 import io.temporal.api.cloud.namespace.v1.Namespace;
 import io.temporal.api.cloud.namespace.v1.NamespaceSpec;
 
+@Component
 public class OperationsMgmt {
 
     private static CloudServiceBlockingStub cloudOpsClient;
+    private CloudOperationDetails cloudOpsDetails;
     private final static Logger logger = LoggerFactory.getLogger(OperationsMgmt.class);
 
-    public OperationsMgmt(CloudOperationDetails cloudOpsDetails) {
-        logger.info("Creating connection to [" + cloudOpsDetails.getHost() + "] on port [" + cloudOpsDetails.getPort()
+    public OperationsMgmt(CloudOperationDetails pCloudOpsDetails) {
+        cloudOpsDetails = pCloudOpsDetails;   // Making the config available to other methods in the class.
+        logger.info("Creating connection to [" + pCloudOpsDetails.getHost() + "] on port [" + pCloudOpsDetails.getPort()
                 + "]");
-        logger.debug("Key used is [" + cloudOpsDetails.getTmprlApiKey() + "]");
+        logger.debug("Key used is [" + pCloudOpsDetails.getTmprlApiKey() + "]");
         Channel channel = ManagedChannelBuilder
-                .forAddress(cloudOpsDetails.getHost(), Integer.parseInt(cloudOpsDetails.getPort()))
+                .forAddress(pCloudOpsDetails.getHost(), Integer.parseInt(pCloudOpsDetails.getPort()))
                 .useTransportSecurity().build();
 
-        HeaderClientInterceptor headerInterceptor = new HeaderClientInterceptor(cloudOpsDetails.getTmprlApiKey());
+        HeaderClientInterceptor headerInterceptor = new HeaderClientInterceptor(pCloudOpsDetails.getTmprlApiKey());
 
         cloudOpsClient = CloudServiceGrpc.newBlockingStub(
                 ClientInterceptors.intercept(channel, headerInterceptor, new LoggingClientInterceptor()));
@@ -278,5 +293,34 @@ public class OperationsMgmt {
                                                                 .build();
         cloudOpsClient.deleteNamespace(deleteNS);
 
+    }
+
+    public CloudOperationsApiKey createShortLivedApiKey(String apiKeyName)
+    {
+        logger.debug("MethodEntry - createShortlivedApiKey");
+        CloudOperationsApiKey cloudOpsApiKey = new CloudOperationsApiKey();
+
+        Timestamp expiry = Timestamp.newBuilder().setSeconds(Instant.now().getEpochSecond() + 60*60*24).build();  // Min time is 1 day
+        ApiKeySpec apiSpec = ApiKeySpec.newBuilder()
+                                        .setExpiryTime(expiry)
+                                        .setDescription("Shortlived apikey to manage namespaces automatically")
+                                        .setDisplayName(apiKeyName)
+                                        .setOwnerType("service-account")
+                                        .setOwnerId(cloudOpsDetails.getApiKeyOwnerId())  // Hardwiring for initial tests....
+                                        .build();
+        CreateApiKeyRequest apiKeyRequest = CreateApiKeyRequest.newBuilder()  
+                                                         .setSpec(apiSpec)                                        
+                                                         .build();
+        
+        
+        CreateApiKeyResponse apiKeyCreated = cloudOpsClient.createApiKey( apiKeyRequest );
+
+        cloudOpsApiKey.setApiKeyId(apiKeyCreated.getKeyId());
+        cloudOpsApiKey.setApikeyToken(apiKeyCreated.getToken());
+        cloudOpsApiKey.setDescription(apiKeyCreated.getDescriptor().getName());
+        cloudOpsApiKey.setDisplayName(apiKeyName);
+        cloudOpsApiKey.setExpiryTime(LocalDateTime.ofEpochSecond(expiry.getSeconds(), 0, ZoneId.systemDefault().getRules().getOffset(Instant.now() )) );
+        cloudOpsApiKey.setState("Active");  // Hardwiring it as active having just created key.
+        return cloudOpsApiKey;
     }
 }

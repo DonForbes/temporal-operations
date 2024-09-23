@@ -22,6 +22,7 @@ import org.springframework.vault.support.VaultCertificateRequest;
 import org.springframework.vault.support.VaultCertificateResponse;
 import org.springframework.vault.support.VaultIssuerCertificateRequestResponse;
 
+import com.donald.demo.ops.namespace.model.CloudOperationsApiKey;
 import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 
 import lombok.experimental.UtilityClass;
@@ -102,6 +103,12 @@ public class CertificateUtil {
 
     } // End getCertsFromString
 
+
+	public static CloudOperationsApiKey getTemporalCloudToken(String tokenName)
+	{
+		
+		return null;
+	}  // End getTemporalCloudToken
 
    // private String decodeCACert(String base64EncodedCACert)
    // {
