@@ -65,9 +65,10 @@ public class OperationsMgmt {
         Collection<CloudOperationsNamespace> cloudOpsNamespaces = new ArrayList<CloudOperationsNamespace>();
 
         GetNamespacesRequest nsRequest = GetNamespacesRequest.newBuilder().build();
+
         try {
             GetNamespacesResponse nsResp = cloudOpsClient.getNamespaces(nsRequest);
-
+        
             for (Namespace namespace : nsResp.getNamespacesList()) {
 
                 CloudOperationsNamespace cloudOpsNS = new CloudOperationsNamespace();
@@ -76,6 +77,7 @@ public class OperationsMgmt {
                 cloudOpsNS.setState(namespace.getState());
                 cloudOpsNamespaces.add(cloudOpsNS);
             } // End namespace loop
+            
         } catch (Exception e) {
             System.out.println(e);
             throw e;
