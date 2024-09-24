@@ -38,6 +38,9 @@ import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc.CloudServiceBlocki
 import io.temporal.api.cloud.cloudservice.v1.CreateNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.DeleteNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetApiKeyRequest;
+import io.temporal.api.cloud.cloudservice.v1.GetApiKeyResponse;
+import io.temporal.api.cloud.cloudservice.v1.DeleteApiKeyRequest;
+import io.temporal.api.cloud.cloudservice.v1.DeleteApiKeyResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesRequest;
@@ -323,4 +326,42 @@ public class OperationsMgmt {
         cloudOpsApiKey.setState("Active");  // Hardwiring it as active having just created key.
         return cloudOpsApiKey;
     }
+
+    public CloudOperationsApiKey getApiKeyById(String apiKeyId)
+    {
+        logger.debug("MethodEntry - OperationsMgmt.getApiKeyByID, keyID is [{}]", apiKeyId);
+        CloudOperationsApiKey cloudOpsApiKey = new CloudOperationsApiKey();
+
+        GetApiKeyRequest apiKeyRequest = GetApiKeyRequest.newBuilder()
+                                                         .setKeyId(apiKeyId)
+                                                         .build();
+
+        GetApiKeyResponse apiKeyResp = cloudOpsClient.getApiKey(apiKeyRequest);
+        cloudOpsApiKey.setApiKeyId(apiKeyResp.getApiKey().getId());
+        cloudOpsApiKey.setDescription(apiKeyResp.getApiKey().getSpec().getDescription());
+        cloudOpsApiKey.setDisplayName(apiKeyResp.getApiKey().getSpec().getDisplayName());
+        cloudOpsApiKey.setState(apiKeyResp.getApiKey().getState());
+        cloudOpsApiKey.setExpiryTime(LocalDateTime.ofEpochSecond(apiKeyResp.getApiKey().getSpec().getExpiryTime().getSeconds(),0,ZoneId.systemDefault().getRules().getOffset(Instant.now()) ) );
+
+
+        return cloudOpsApiKey;
+    }  // End getAPiKeyById
+    public boolean deleteApiKeyById(String apiKeyId)
+    {
+        logger.debug("MethodEntry - OperationsMgmt.deleteApiKeyById - key id to delete is [{}]", apiKeyId);
+        GetApiKeyRequest apiKeyRequest = GetApiKeyRequest.newBuilder()
+                                                        .setKeyId(apiKeyId)
+                                                        .build();
+
+        GetApiKeyResponse apiKeyResp = cloudOpsClient.getApiKey(apiKeyRequest);
+
+        DeleteApiKeyRequest delApiKey = DeleteApiKeyRequest.newBuilder() 
+                                                            .setKeyId(apiKeyId)
+                                                            .setResourceVersion(apiKeyResp.getApiKey().getResourceVersion())
+                                                            .build();
+
+        DeleteApiKeyResponse delApiKeyResp = cloudOpsClient.deleteApiKey(delApiKey);
+
+        return true;
+    }  // End deleteApiKeyById
 }

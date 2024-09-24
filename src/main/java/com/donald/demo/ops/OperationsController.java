@@ -218,5 +218,41 @@ public class OperationsController {
         CloudOperationsApiKey cloudOpsApiKey = opsMgmt.createShortLivedApiKey(apiKeyName);
         return ResponseEntity.of(Optional.of(cloudOpsApiKey));
     }   // End createShortLivedApiKey
+
+
+    @GetMapping("apikey/id/{apiKeyId}")
+    @ResponseBody
+    public ResponseEntity<CloudOperationsApiKey> getApiKeyById(@PathVariable String apiKeyId,
+                                                 @RequestHeader("Authorization") String apiKeyBearer) 
+    {
+        logger.debug("Method Entry - getAPiKeyById");
+       
+        OperationsMgmt opsMgmt = this.getOpsMgmt(apiKeyBearer);
+
+        CloudOperationsApiKey cloudOpsApiKey = opsMgmt.getApiKeyById(apiKeyId);
+        return ResponseEntity.of(Optional.of(cloudOpsApiKey));
+     }  // End getApiKeyById
+
+    @DeleteMapping("apikey/id/{apiKeyId}")
+    @ResponseBody
+    public ResponseEntity<Boolean> deleteApiKeyById(@PathVariable String apiKeyId,
+                                                 @RequestHeader("Authorization") String apiKeyBearer) 
+    {
+        logger.debug("Method Entry - deleteAPiKeyById");
+       
+        OperationsMgmt opsMgmt = this.getOpsMgmt(apiKeyBearer);
+
+        return ResponseEntity.of(Optional.of(Boolean.valueOf(opsMgmt.deleteApiKeyById(apiKeyId))));
+     }  // End getApiKeyById
+     
+     private OperationsMgmt getOpsMgmt(String pApiKeyBearer)
+     {
+        logger.debug("Method Entry - getOpsMgmt");
+        String apiKey = pApiKeyBearer.replace("Bearer ","");
+        logger.debug("Using token [{}] to access CloudOps ", apiKey);
+
+        cloudOpsDetails.setTmprlApiKey(apiKey);
+        return new OperationsMgmt(cloudOpsDetails);
+     }
 }
  
