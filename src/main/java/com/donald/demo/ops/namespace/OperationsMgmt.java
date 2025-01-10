@@ -25,6 +25,7 @@ import com.donald.demo.ops.namespace.model.CloudOperationsCertAuthority;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespace;
 import com.donald.demo.ops.namespace.model.CloudOperationsNamespaceAccess;
 import com.donald.demo.ops.namespace.model.CloudOperationsUser;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 
@@ -50,6 +51,7 @@ import io.temporal.api.cloud.cloudservice.v1.GetUsersResponse;
 import io.temporal.api.cloud.cloudservice.v1.UpdateApiKeyRequest;
 import io.temporal.api.cloud.cloudservice.v1.UpdateNamespaceRequest;
 import io.temporal.api.cloud.identity.v1.ApiKeySpec;
+import io.temporal.api.cloud.identity.v1.OwnerType;
 import io.temporal.api.cloud.identity.v1.User;
 import io.temporal.api.cloud.namespace.v1.CodecServerSpec;
 import io.temporal.api.cloud.namespace.v1.MtlsAuthSpec;
@@ -92,7 +94,7 @@ public class OperationsMgmt {
                 CloudOperationsNamespace cloudOpsNS = new CloudOperationsNamespace();
                 cloudOpsNS.setName(namespace.getNamespace());
                 cloudOpsNS.setActiveRegion(namespace.getActiveRegion());
-                cloudOpsNS.setState(namespace.getState());
+                cloudOpsNS.setState(namespace.getState().name());
                 cloudOpsNamespaces.add(cloudOpsNS);
             } // End namespace loop
             
@@ -113,10 +115,10 @@ public class OperationsMgmt {
         GetNamespaceResponse nsResponse = cloudOpsClient.getNamespace(nsRequest);
         Namespace namespace = nsResponse.getNamespace();
         cloudOpsNamespace.setRetentionPeriod(namespace.getSpec().getRetentionDays());
-        cloudOpsNamespace.setCertAuthorityPublicCertificates(namespace.getSpec().getMtlsAuth().getAcceptedClientCa());
+        cloudOpsNamespace.setCertAuthorityPublicCertificates(namespace.getSpec().getMtlsAuth().getAcceptedClientCa().toStringUtf8());
         cloudOpsNamespace.setCertAuthorityPublicCerts(CertificateUtil.getCertsFromString(cloudOpsNamespace.getCertAuthorityPublicCertificates()));
         cloudOpsNamespace.setActiveRegion(namespace.getActiveRegion());
-        cloudOpsNamespace.setState(namespace.getState());
+        cloudOpsNamespace.setState(namespace.getState().name());
         cloudOpsNamespace.setCloudOpsUsers(this.getUsersByNamespace(cloudOpsNamespace.getName()));
         cloudOpsNamespace.setCodecEndPoint(namespace.getSpec().getCodecServer().getEndpoint());
 
@@ -138,7 +140,7 @@ public class OperationsMgmt {
         }
         
         MtlsAuthSpec mtlsSpec = MtlsAuthSpec.newBuilder()
-                                            .setAcceptedClientCa(Base64.getEncoder().encodeToString(certs.toString().getBytes()))
+                                            .setAcceptedClientCa(ByteString.copyFrom(Base64.getEncoder().encode(certs.toString().getBytes())))
                                             .setEnabled(true)
                                             .build();
         CodecServerSpec codecServerSpec = CodecServerSpec.newBuilder().setEndpoint(cloudOpsNamespace.getCodecEndPoint()).build();
@@ -178,7 +180,7 @@ public class OperationsMgmt {
             certs.append(System.lineSeparator());
         }
         MtlsAuthSpec mtlsSpec = MtlsAuthSpec.newBuilder()
-                                            .setAcceptedClientCa(Base64.getEncoder().encodeToString(certs.toString().getBytes()))
+                                            .setAcceptedClientCa(ByteString.copyFrom(Base64.getEncoder().encode(certs.toString().getBytes())))
                                             .setEnabled(true)
                                             .build();
 
@@ -227,11 +229,11 @@ public class OperationsMgmt {
                 CloudOperationsNamespaceAccess cloudOpsNamespaceAccess = new CloudOperationsNamespaceAccess();
                 cloudOpsNamespaceAccess.setNamespace(nsAccessKey);
                 cloudOpsNamespaceAccess.setPermission(
-                        user.getSpec().getAccess().getNamespaceAccessesMap().get(nsAccessKey).getPermission());
+                        user.getSpec().getAccess().getNamespaceAccessesMap().get(nsAccessKey).getPermission().name());
                 cloudOpsNSAccess.add(cloudOpsNamespaceAccess);
             }
             aUser.setCloudOpsNamespaceAccess(cloudOpsNSAccess);
-            aUser.setRole(user.getSpec().getAccess().getAccountAccess().getRole());
+            aUser.setRole(user.getSpec().getAccess().getAccountAccess().getRole().name());
 
             cloudOpsUsers.add(aUser);
         }
@@ -308,7 +310,7 @@ public class OperationsMgmt {
                                         .setExpiryTime(expiry)
                                         .setDescription("Shortlived apikey to manage namespaces automatically")
                                         .setDisplayName(apiKeyName)
-                                        .setOwnerType("service-account")
+                                        .setOwnerType(OwnerType.OWNER_TYPE_SERVICE_ACCOUNT)
                                         .setOwnerId(cloudOpsDetails.getApiKeyOwnerId())  // Hardwiring for initial tests....
                                         .build();
         CreateApiKeyRequest apiKeyRequest = CreateApiKeyRequest.newBuilder()  
@@ -340,7 +342,7 @@ public class OperationsMgmt {
         cloudOpsApiKey.setApiKeyId(apiKeyResp.getApiKey().getId());
         cloudOpsApiKey.setDescription(apiKeyResp.getApiKey().getSpec().getDescription());
         cloudOpsApiKey.setDisplayName(apiKeyResp.getApiKey().getSpec().getDisplayName());
-        cloudOpsApiKey.setState(apiKeyResp.getApiKey().getState());
+        cloudOpsApiKey.setState(apiKeyResp.getApiKey().getState().name());
         cloudOpsApiKey.setExpiryTime(LocalDateTime.ofEpochSecond(apiKeyResp.getApiKey().getSpec().getExpiryTime().getSeconds(),0,ZoneId.systemDefault().getRules().getOffset(Instant.now()) ) );
 
 
@@ -364,4 +366,9 @@ public class OperationsMgmt {
 
         return true;
     }  // End deleteApiKeyById
+
+    public String getSchedules()
+    {
+        return "TODO";
+    }
 }
