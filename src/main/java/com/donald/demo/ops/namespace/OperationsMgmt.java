@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,6 +30,7 @@ import com.donald.demo.ops.namespace.model.CloudOperationsUser;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 
 import io.grpc.Channel;
 import io.grpc.ClientInterceptors;
@@ -46,6 +49,12 @@ import io.temporal.api.cloud.cloudservice.v1.GetNamespaceRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespaceResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetNamespacesResponse;
+import io.temporal.api.cloud.cloudservice.v1.GetServiceAccountRequest;
+import io.temporal.api.cloud.cloudservice.v1.GetServiceAccountResponse;
+import io.temporal.api.cloud.cloudservice.v1.GetServiceAccountsRequest;
+import io.temporal.api.cloud.cloudservice.v1.GetServiceAccountsResponse;
+import io.temporal.api.cloud.cloudservice.v1.GetUsageRequest;
+import io.temporal.api.cloud.cloudservice.v1.GetUsageResponse;
 import io.temporal.api.cloud.cloudservice.v1.GetUsersRequest;
 import io.temporal.api.cloud.cloudservice.v1.GetUsersResponse;
 import io.temporal.api.cloud.cloudservice.v1.UpdateApiKeyRequest;
@@ -57,6 +66,8 @@ import io.temporal.api.cloud.namespace.v1.CodecServerSpec;
 import io.temporal.api.cloud.namespace.v1.MtlsAuthSpec;
 import io.temporal.api.cloud.namespace.v1.Namespace;
 import io.temporal.api.cloud.namespace.v1.NamespaceSpec;
+import io.temporal.api.cloud.usage.v1.RecordGroup;
+import io.temporal.api.cloud.usage.v1.Summary;
 
 @Component
 public class OperationsMgmt {
@@ -367,6 +378,65 @@ public class OperationsMgmt {
         return true;
     }  // End deleteApiKeyById
 
+    public String getUsage()
+    {
+        GetUsageRequest getUsageReq = GetUsageRequest.getDefaultInstance();
+        GetUsageResponse usage = cloudOpsClient.getUsage(getUsageReq);
+
+
+         List<Summary> summaries = usage.getSummariesList();
+        for (Summary summary : summaries)
+        {
+            
+            
+            List<RecordGroup> recordGrps = summary.getRecordGroupsList();
+            for (RecordGroup record : recordGrps)
+            {
+                logger.info("Record Group [{}]", record.toString());
+            }
+
+            //Map<FieldDescriptor, Object> summaryFields = summary.getAllFields();
+            //for (FieldDescriptor field: summaryFields.keySet())
+            //{
+            //    logger.info("Summary Fields [{}]]",field.getName());
+            //}
+        }
+        //logger.info("Usage [{}]", usage.toString());
+
+        Map<FieldDescriptor, Object> fields = usage.getAllFields();
+        for (FieldDescriptor field : fields.keySet())
+        {
+            logger.info("Field [{}]", field.getName());
+        }
+        return usage.toString();
+
+    }  // End getUsage
+    public String getUsageByNamespace(String namespace)
+    {
+        
+       // FieldDescriptor 
+        GetUsageRequest getUsageReq = GetUsageRequest.getDefaultInstance();
+        GetUsageResponse usage = cloudOpsClient.getUsage(getUsageReq);
+
+        List<Summary> summaries = usage.getSummariesList();
+
+        for (Summary summary : summaries)
+        {
+            logger.info("TODO - Find for a given namespace");
+        }
+        //logger.info("Usage [{}]", usage.toString());
+
+        return usage.toString();
+
+    }  // End getUsage
+
+    public String getServiceAccounts()
+    {
+        GetServiceAccountsRequest saRequest = GetServiceAccountsRequest.getDefaultInstance();
+        GetServiceAccountsResponse serviceAccounts = cloudOpsClient.getServiceAccounts(saRequest);
+        
+        return serviceAccounts.toString();
+    } // End getServiceAccounts
     public String getSchedules()
     {
         return "TODO";

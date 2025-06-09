@@ -23,7 +23,7 @@ Then using a browser connect to localhost:8200 and pick one root token and one u
 Log into the vault UI and navigate to the pki secrets engine.
 There may be several issuers (rootCAs) setup but only one will be the default.  Check also that the role (temporal-operations-role) has been setup to use the default issurer.
 
-If all is good then navigate to the default issuer and click on "roate this root" which will provide an option to copy the values from the previous root in, select this and provide a new issuer name.  For example temporal-operation-issuer-vX.
+If all is good then navigate to the default issuer and click on "rotate this root" which will provide an option to copy the values from the previous root in, select this and provide a new issuer name.  For example temporal-operation-issuer-vX.
 
 Once complete it is necessary to change the default issuer, from what I can tell this is only possible using teh command line:-
 

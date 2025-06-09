@@ -245,6 +245,40 @@ public class OperationsController {
         return ResponseEntity.of(Optional.of(Boolean.valueOf(opsMgmt.deleteApiKeyById(apiKeyId))));
      }  // End getApiKeyById
      
+     @GetMapping("usage/{namespace}")
+     @ResponseBody
+     public ResponseEntity<String> getUsageByNamespace(
+                                                    @PathVariable String namespace,
+                                                    @RequestHeader("Authorization") String apiKeyBearer) 
+     {
+        OperationsMgmt opsMgmt = this.getOpsMgmt(apiKeyBearer);
+
+
+        return ResponseEntity.of(Optional.of(opsMgmt.getUsageByNamespace(namespace)));
+
+     } // End getUsageByNamespace
+
+     @GetMapping("usage")
+     @ResponseBody
+     public ResponseEntity<String> getUsage(@RequestHeader("Authorization") String apiKeyBearer) 
+     {
+        OperationsMgmt opsMgmt = this.getOpsMgmt(apiKeyBearer);
+
+
+        return ResponseEntity.of(Optional.of(opsMgmt.getUsage()));
+
+     } // End getUsage
+
+
+     @GetMapping("serviceaccounts")
+     @ResponseBody
+     public ResponseEntity<String> getServiceAccounts(@RequestHeader("Authorization") String apiKeyBearer)
+     {
+        OperationsMgmt opsMgmt = this.getOpsMgmt(apiKeyBearer);
+
+        return ResponseEntity.of(Optional.of(opsMgmt.getServiceAccounts()));
+     }
+
      private OperationsMgmt getOpsMgmt(String pApiKeyBearer)
      {
         logger.debug("Method Entry - getOpsMgmt");
